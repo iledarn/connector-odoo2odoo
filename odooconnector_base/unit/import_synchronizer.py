@@ -4,9 +4,9 @@
 import logging
 import time
 
-from openerp import fields, _
-from openerp.addons.connector.queue.job import job
-from openerp.addons.connector.unit.synchronizer import Importer
+from odoo import fields, _
+from odoo.addons.connector.queue.job import job
+from odoo.addons.connector.unit.synchronizer import Importer
 
 from ..connector import get_environment
 
@@ -33,7 +33,7 @@ class OdooImporter(Importer):
         """ Return the raw data """
         return self.backend_adapter.read(self.external_id,
                                          fields=fields,
-                                         model_name=self._ic_model_name)
+                                         model_name=self._ic_model_name)[0]
 
     def _is_uptodate(self, binding):
         """ Check if the import is uptodate and should be skipped.
@@ -203,7 +203,7 @@ class TranslationImporter(Importer):
         for language in self._get_languages():
             _logger.debug('Process language %s', language)
             external_record = self._get_external_data(language)
-            mapped_record = mapper.map_record(external_record)
+            mapped_record = mapper.map_record(external_record[0])
             record = mapped_record.values()
 
             data = {field: value for field, value in record.iteritems()

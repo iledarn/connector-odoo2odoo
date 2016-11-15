@@ -60,7 +60,6 @@ class ProductSupplierInfoImportMapper(OdooImportMapper):
               ('delay', 'delay')]
 
     children = [
-        ('pricelist_ids', 'pricelist_ids', 'pricelist.partnerinfo')
     ]
 
     def _map_child(self, map_record, from_attr, to_attr, model_name):
