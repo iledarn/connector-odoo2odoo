@@ -77,7 +77,7 @@ class ProductImportMapper(OdooImportMapper):
         for child_record in child_records:
             adapter = self.unit_for(OdooAdapter, model_name)
 
-            detail_record = adapter.read(child_record)
+            detail_record = adapter.read(child_record)[0]
             detail_records.append(detail_record)
 
         mapper = self._get_map_child_unit(model_name)
