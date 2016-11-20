@@ -42,14 +42,14 @@ class OdooAdapterGeneric(CRUDAdapter):
             model_name = self.model.openerp_id._name
 
         _logger.debug('Adapter is using model "%s" for call', model_name)
-        return self.api.get(model_name)
+        return self.api.env[model_name]
 
     def _api_reset_context(self, old_context, new_context):
         """ Reset the APIs context to the old_context """
         for k, v in new_context.iteritems():
-            self.api.context.pop(k)
+            self.api.env.context.pop(k)
         for k, v in old_context.iteritems():
-            self.api.context[k] = v
+            self.api.env.context[k] = v
 
     def _call(self, method, data,
               object_id=None, model_name=None, fields=None, context=None):
@@ -77,9 +77,9 @@ class OdooAdapterGeneric(CRUDAdapter):
             # if a context is given we update the api context
             # TODO(MJ): Use a contextmanager for context changing!
             if context:
-                org_context = dict(self.api.context)
+                org_context = dict(self.api.env.context)
                 for k, v in context.iteritems():
-                    self.api.context[k] = v
+                    self.api.env.context[k] = v
 
             model_obj = self._get_api_model(model_name)
 
