@@ -4,7 +4,7 @@
 import logging
 
 try:
-    import oerplib.error
+    import odoorpc.error
 except ImportError:
     pass
 
@@ -84,7 +84,11 @@ class OdooAdapterGeneric(CRUDAdapter):
             model_obj = self._get_api_model(model_name)
 
             if not object_id:
-                result = getattr(model_obj, method)(data)
+                m = getattr(model_obj, method)
+                if fields:
+                    result = m(data, fields=fields)
+                else:
+                    result = m(data)
             else:
                 m = getattr(model_obj, method)
                 if fields:
@@ -99,7 +103,7 @@ class OdooAdapterGeneric(CRUDAdapter):
 
             return result
 
-        except oerplib.error.RPCError as e:
+        except odoorpc.error.RPCError as e:
             _logger.exception(e)
 
         except Exception as e:
