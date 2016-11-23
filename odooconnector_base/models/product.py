@@ -155,7 +155,7 @@ class ProductImporter(OdooImporter):
             if product_tmpl:
                 date_from_string = fields.Datetime.from_string
                 sync_date = date_from_string(binding.sync_date)
-                external_date = date_from_string(product_tmpl['write_date'])
+                external_date = date_from_string(product_tmpl[0]['write_date'])
 
                 return external_date < sync_date
 
