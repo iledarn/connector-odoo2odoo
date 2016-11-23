@@ -84,11 +84,20 @@ class OdooAdapterGeneric(CRUDAdapter):
             model_obj = self._get_api_model(model_name)
 
             if not object_id:
-                m = getattr(model_obj, method)
-                if fields:
-                    result = m(data, fields=fields)
-                else:
-                    result = m(data)
+                result = getattr(model_obj, method)(data)
+
+                # TODO: commented code below instead of the line above
+                # fixes the problem with fields specific requests but
+                # this module have another issue depending on that - in ProductImporter._is_update
+                # method: if we requested only 'write_date' field as specified there
+                # then we wouldn't have 'product_tmpl_id' and have an exception
+                # Temporary decision is to request all model's fields as before
+
+                # m = getattr(model_obj, method)
+                # if fields:
+                    # result = m(data, fields=fields)
+                # else:
+                    # result = m(data)
             else:
                 m = getattr(model_obj, method)
                 if fields:
