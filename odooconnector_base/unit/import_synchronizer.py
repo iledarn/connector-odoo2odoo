@@ -5,10 +5,7 @@ import logging
 import time
 
 from odoo import fields, _
-from odoo.addons.connector.queue.job import job
 from odoo.addons.connector.unit.synchronizer import Importer
-
-from ..connector import get_environment
 
 
 _logger = logging.getLogger(__name__)
@@ -246,31 +243,4 @@ class DirectBatchImporter(BatchImporter):
     _ic_model_name = None
 
     def _import_record(self, record_id, api=None):
-        """ Import record directly """
-        import_record(self.session, self.model._name, self.backend_record.id,
-                      record_id, api=api)
-
-
-@job
-def import_batch(session, model_name, backend_id, filters=None):
-    """ Prepare a batch import of records """
-    _logger.debug("Import batch for '{}'".format(model_name))
-    env = get_environment(session, model_name, backend_id)
-    importer = env.get_connector_unit(BatchImporter)
-    importer.run(filters=filters)
-
-
-@job
-def import_record(session, model_name, backend_id, external_id, api=None):
-    """ Import a record """
-    _logger.debug("Import record for '{}'".format(model_name))
-
-    env = get_environment(session, model_name, backend_id, api=api)
-
-    lang = env.backend_record.default_lang_id
-    lang_code = lang.code if lang else 'en_US'
-
-    # FIXME: Logic for context change must be in `get_environment`
-    with env.session.change_context(lang=lang_code):
-        importer = env.get_connector_unit(OdooImporter)
-        importer.run(external_id)
+        self.backend_record.import_record(self.model._name, record_id, api=api)

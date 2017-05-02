@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
 # © 2015 Malte Jacobi (maljac @ github)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+import logging
 from openerp import models, fields, api
-from openerp.addons.connector.session import ConnectorSession
+from odoo.addons.queue_job.job import job
+from ..unit.import_synchronizer import BatchImporter
+from ..unit.import_synchronizer import OdooImporter
+from ..connector import APIConnectorEnvironment
 
-from ..unit.import_synchronizer import import_batch
+_logger = logging.getLogger(__name__)
+
+try:
+    import odoorpc
+except ImportError:
+    _logger.debug('odoorpc package is required which is not \
+    found on your installation')
 
 
 class OdooBinding(models.AbstractModel):
@@ -127,42 +137,60 @@ class OdooBackend(models.Model):
     )
 
     @api.multi
+    def get_environment(self, binding_model_name, api=None):
+        self.ensure_one()
+        if not api:
+            api = odoorpc.ODOO(self.hostname, 'jsonrpc', self.port)
+            api.login(self.database, self.username, self.password)
+            _logger.info('Created a new Odoo API instance')
+        env = APIConnectorEnvironment(self, binding_model_name, api=api)
+        return env
+
+    @api.multi
+    @job
+    def import_batch(self, binding_model_name, filters=None):
+        """ Prepare a batch import of records from CSV """
+        self.ensure_one()
+        connector_env = self.get_environment(binding_model_name)
+        importer = connector_env.get_connector_unit(BatchImporter)
+        importer.run(filters=filters)
+
+    @api.multi
+    @job
+    def import_record(self, binding_model_name, ext_id, force=False, api=None):
+        """ Import a record from CSV """
+        self.ensure_one()
+        connector_env = self.get_environment(binding_model_name)
+        importer = connector_env.get_connector_unit(OdooImporter)
+        importer.run(ext_id, force=force)
+
+    @api.multi
     def import_partners(self):
         """ Import partners from external system """
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
         for backend in self:
             filters = self.import_partner_domain_filter
             if filters and isinstance(filters, str):
                 filters = eval(filters)
 
-            import_batch(session, 'odooconnector.res.partner', backend.id,
-                         filters)
+            backend.import_batch('odooconnector.res.partner', filters)
 
         return True
 
     @api.multi
     def import_products(self):
         """ Import products from external system """
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
-
         for backend in self:
             filters = self.import_product_domain_filter
             if filters and isinstance(filters, str):
                 filters = eval(filters)
 
-            import_batch(session, 'odooconnector.product.product',
-                         backend.id, filters)
+            backend.import_batch('odooconnector.product.product', filters)
 
         return True
 
     @api.multi
     def import_product_uom(self):
         """Import Product UoM from external System"""
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
-
         for backend in self:
-            import_batch(session, 'odooconnector.product.uom', backend.id)
+            backend.import_batch('odooconnector.product.uom')
         return True
