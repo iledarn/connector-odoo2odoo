@@ -8,7 +8,6 @@ from openerp.addons.connector.unit.mapper import (mapping, ExportMapper)
 
 from ..unit.import_synchronizer import (OdooImporter,
                                         DirectBatchImporter)
-from ..unit.export_synchronizer import (OdooExporter)
 from ..unit.mapper import OdooImportMapper
 from ..backend import oc_odoo
 
