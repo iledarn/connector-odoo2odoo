@@ -4,13 +4,11 @@
 import logging
 
 from openerp import models, fields
-from openerp.addons.connector.unit.mapper import (mapping, ExportMapper)
+from openerp.addons.connector.unit.mapper import mapping
 
 from ..unit.import_synchronizer import (OdooImporter, DirectBatchImporter,
                                         TranslationImporter)
-from ..unit.export_synchronizer import (OdooExporter, TranslationExporter)
-from ..unit.mapper import (OdooImportMapper, OdooImportMapChild,
-                           OdooExportMapChild)
+from ..unit.mapper import (OdooImportMapper, OdooImportMapChild)
 from ..unit.backend_adapter import OdooAdapter
 from ..backend import oc_odoo
 
@@ -165,104 +163,3 @@ class ProductImporter(OdooImporter):
 @oc_odoo
 class ProductImportChildMapper(OdooImportMapChild):
     _model_name = ['odooconnector.product.supplierinfo']
-
-
-@oc_odoo
-class ProductExportMapper(ExportMapper):
-    _model_name = ['odooconnector.product.product']
-    _map_child_class = OdooExportMapChild
-
-    direct = [('name', 'name'), ('name_template', 'name_template'),
-              ('type', 'type'),
-              ('purchase_ok', 'purchase_ok'), ('sale_ok', 'sale_ok'),
-              ('lst_price', 'lst_price'), ('standard_price', 'standard_price'),
-              ('ean13', 'ean13'), ('default_code', 'default_code'),
-              ('description', 'description')]
-
-    children = [
-        ('seller_ids', 'seller_ids', 'odooconnector.product.supplierinfo')
-    ]
-
-    @mapping
-    def uom_id(self, record):
-        if not record.uom_id.id:
-            return
-        uom_id = self._uom_name_search(record.uom_id.name)
-        if uom_id:
-            return {'uom_id': uom_id}
-
-    @mapping
-    def uom_po_id(self, record):
-        if not record.uom_po_id.id:
-            return
-        uom_id = self._uom_name_search(record.uom_po_id.name)
-        if uom_id:
-            return {'uom_po_id': uom_id}
-
-    def _uom_name_search(self, uom_name):
-        """Search for a uom by name
-
-        :returns: uom id or None
-        """
-        # TODO: Unnecessary round trip ...
-        adapter = self.unit_for(OdooAdapter, 'product.uom')
-        filters = [('name', '=', uom_name), ]
-        uom = adapter.search(
-            filters=filters,
-            context={'lang': 'en_US'},  # TODO: In general better lang support!
-            model_name='product.uom')
-
-        if uom and len(uom) == 1:
-            return uom[0]
-
-
-@oc_odoo
-class ProductTranslationExporter(TranslationExporter):
-    _model_name = ['odooconnector.product.product']
-
-
-# TODO(MJ): Instead of definining a specific translation mapper for each model
-#           a special translation mapper should be used that create the list
-#           of direct fields dynamically based on a given list of fields,
-#           e.g. the list of translatable fields.
-@oc_odoo
-class ProductTranslationExportMapper(ExportMapper):
-    _model_name = ['odooconnector.product.product']
-    direct = [('name', 'name'), ('name_template', 'name_template'),
-              ('description', 'description')]
-
-
-@oc_odoo
-class ProductExporter(OdooExporter):
-    _model_name = ['odooconnector.product.product']
-    _base_mapper = ProductExportMapper
-
-    def _pre_export_check(self, record):
-        """ Run some checks before exporting the record """
-        if not self.backend_record.default_export_product:
-            return False
-
-        domain = self.backend_record.default_export_product_domain
-        return self._pre_export_domain_check(record, domain)
-
-    def _after_export(self, record_created):
-        _logger.debug('Product exporter: _after_export called')
-        translations_exporter = self.unit_for(TranslationExporter)
-        translations_exporter.run(
-            self.external_id,
-            self.binding_id,
-            mapper_class=ProductTranslationExportMapper)
-
-        if record_created:
-            record_id = self.binder.unwrap_binding(self.binding_id)
-            data = {
-                'backend_id': self.backend_record.export_backend_id,
-                'openerp_id': self.external_id,
-                'external_id': record_id,
-                'exported_record': False
-            }
-            self.backend_adapter.create(
-                data,
-                model_name='odooconnector.product.product',
-                context={'connector_no_export': True}
-            )

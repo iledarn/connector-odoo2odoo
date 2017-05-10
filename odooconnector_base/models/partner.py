@@ -4,7 +4,7 @@
 import logging
 
 from openerp import models, fields
-from openerp.addons.connector.unit.mapper import (mapping, ExportMapper)
+from openerp.addons.connector.unit.mapper import mapping
 
 from ..unit.import_synchronizer import (OdooImporter,
                                         DirectBatchImporter)
@@ -72,48 +72,3 @@ class PartnerImportMapper(OdooImportMapper):
         )
         if country:
             return {'country_id': country.id}
-
-
-@oc_odoo
-class PartnerExporter(OdooExporter):
-    _model_name = ['odooconnector.res.partner']
-
-    def _get_remote_model(self):
-        return 'res.partner'
-
-    def _pre_export_check(self, record):
-        if not self.backend_record.default_export_partner:
-            return False
-
-        domain = self.backend_record.default_export_partner_domain
-        return self._pre_export_domain_check(record, domain)
-
-    def _after_export(self, record_created):
-        # create a ic_binding in the backend, indicating that the partner
-        # was exported
-        if record_created:
-            record_id = self.binder.unwrap_binding(self.binding_id)
-            data = {
-                'backend_id': self.backend_record.export_backend_id,
-                'openerp_id': self.external_id,
-                'external_id': record_id,
-                'exported_record': False
-            }
-            self.backend_adapter.create(
-                data,
-                model_name='odooconnector.res.partner',
-                context={'connector_no_export': True}
-            )
-
-
-@oc_odoo
-class PartnerExportMapper(ExportMapper):
-    _model_name = 'odooconnector.res.partner'
-
-    direct = [('name', 'name'), ('is_company', 'is_company'),
-              ('street', 'street'), ('street2', 'street2'), ('city', 'city'),
-              ('zip', 'zip'), ('website', 'website'), ('phone', 'phone'),
-              ('mobile', 'mobile'), ('fax', 'fax'), ('email', 'email'),
-              ('comment', 'comment'), ('supplier', 'supplier'),
-              ('customer', 'customer'), ('ref', 'ref'), ('lang', 'lang'),
-              ('date', 'date'), ('notify_email', 'notify_email')]
